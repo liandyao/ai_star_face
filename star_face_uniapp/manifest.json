@@ -1,0 +1,17 @@
+{
+    "name" : "mingxing-face",
+    "appid" : "__UNI__B18C9E2",
+    "description" : "你与哪位明星最相似",
+    "versionName" : "1.0.0",
+    "versionCode" : "100",
+    "transformPx" : false,
+    "mp-weixin" : {
+        "appid" : "wx97a2857166ff17b7",
+        "setting" : {
+            "urlCheck" : true,
+            "es6" : true,
+            "minified" : true
+        },
+        "usingComponents" : true
+    }
+}
