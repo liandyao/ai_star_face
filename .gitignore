@@ -2,6 +2,7 @@ admin/.venv
 admin/__pycache__
 admin/.idea
 admin/config.py
+admin/data/new_cloud/
 star_face_uniapp/.hbuilderx
 star_face_uniapp/unpackage
 star_face_uniapp/uniCloud-alipay
