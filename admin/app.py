@@ -1,6 +1,7 @@
 """
 Flask 后台管理服务
-提供：创建人员库、添加明星、搜索明星等接口
+仅用于管理腾讯云 IAI 明星人员库（增删查）
+业务逻辑（人脸搜索、比对等）由 uniCloud 云函数 faceSearch 处理
 """
 from flask import Flask, request, jsonify
 from tencent_iai import TencentIAI
@@ -25,49 +26,35 @@ def load_stars():
     return stars
 
 
-# 构建明星数据字典，用于搜索时快速查找
 STARS = load_stars()
 STARS_MAP = {s["person_id"]: s for s in STARS}
 
 
-# ─────────────────────────────────────────────
-# 工具接口
-# ─────────────────────────────────────────────
-
 @app.route("/api/health", methods=["GET"])
 def health():
-    """健康检查"""
     return jsonify({"status": "ok", "time": time.strftime("%Y-%m-%d %H:%M:%S")})
 
 
 @app.route("/api/group/create", methods=["POST"])
 def create_group():
-    """创建人员库"""
     result = iai.create_group(GROUP_NAME, tag="明星脸比对专用库")
     return jsonify(result)
 
 
 @app.route("/api/group/list", methods=["GET"])
 def list_groups():
-    """获取所有人员库"""
     result = iai.get_group_list()
     return jsonify(result)
 
 
 @app.route("/api/stars/list", methods=["GET"])
 def list_stars():
-    """查看已入库明星列表"""
     result = iai.get_person_list(GROUP_ID)
     return jsonify(result)
 
 
-# ─────────────────────────────────────────────
-# 批量添加明星
-# ─────────────────────────────────────────────
-
 @app.route("/api/stars/add", methods=["POST"])
 def add_star():
-    """添加单个明星到人员库"""
     data = request.json
     person_id = data.get("person_id")
     name = data.get("name")
@@ -91,11 +78,6 @@ def add_star():
 
 @app.route("/api/stars/add_batch", methods=["POST"])
 def add_stars_batch():
-    """
-    批量添加明星（从 stars_data.py）
-    POST /api/stars/add_batch
-    Body: {"start": 0, "end": 100}  可选，默认全部
-    """
     data = request.json or {}
     start = data.get("start", 0)
     end = data.get("end", len(STARS))
@@ -112,12 +94,11 @@ def add_stars_batch():
             image_url=star["url"],
             remark=star.get("remark", ""),
         )
-        # 成功或失败都记录
         if "Error" in result:
             results.append({"star": star["name"], "status": "error", "msg": result["Error"]})
         else:
             results.append({"star": star["name"], "status": "success"})
-        time.sleep(0.3)  # 避免请求过快
+        time.sleep(0.3)
 
     success_count = sum(1 for r in results if r["status"] == "success")
     return jsonify({
@@ -128,53 +109,8 @@ def add_stars_batch():
     })
 
 
-# ─────────────────────────────────────────────
-# 人脸搜索（小程序核心接口）
-# ─────────────────────────────────────────────
-
-@app.route("/api/face/search", methods=["POST"])
-def search_face():
-    """
-    人脸搜索 - 小程序调用的核心接口
-    POST /api/face/search
-    Body: {"image_url": "用户上传图片的公网URL"}
-    返回: 相似度最高的明星信息 + 图片URL
-    """
-    data = request.json
-    image_url = data.get("image_url")
-
-    if not image_url:
-        return jsonify({"error": "缺少参数: image_url"}), 400
-
-    result = iai.search_faces(GROUP_ID, image_url, top_k=5)
-
-    # 整理返回结果，带上明星图片URL
-    if "Response" in result and "Results" in result["Response"]:
-        enriched = []
-        for item in result["Response"]["Results"]:
-            person_id = item["PersonId"]
-            # 从STARS_MAP找到对应明星的图片URL
-            star_info = STARS_MAP.get(person_id)
-            enriched.append({
-                "person_id": person_id,
-                "name": item.get("Name", ""),
-                "score": round(item.get("Score", 0), 2),
-                "url": star_info["url"] if star_info else "",
-                "remark": star_info.get("remark", "") if star_info else "",
-                "gender": star_info.get("gender", 0) if star_info else 0,
-            })
-        result["Response"]["Results"] = enriched
-
-    return jsonify(result)
-
-
-# ─────────────────────────────────────────────
-# 删除接口
-# ─────────────────────────────────────────────
-
 @app.route("/api/star/delete", methods=["POST"])
 def delete_star():
-    """删除单个明星"""
     data = request.json
     person_id = data.get("person_id")
     if not person_id:
@@ -185,18 +121,32 @@ def delete_star():
 
 @app.route("/api/group/delete", methods=["POST"])
 def delete_group():
-    """删除整个人员库（慎用）"""
     result = iai.delete_group(GROUP_ID)
     return jsonify(result)
 
 
-# ─────────────────────────────────────────────
-# 启动
-# ─────────────────────────────────────────────
+@app.route("/api/stars/data", methods=["GET"])
+def get_stars_data():
+    """获取本地明星数据（供管理后台使用）"""
+    category = request.args.get("category", "")
+    gender = request.args.get("gender", 0, type=int)
+
+    stars = STARS
+    if category:
+        stars = [s for s in stars if category in s.get("person_id", "")]
+    if gender:
+        stars = [s for s in stars if s.get("gender") == gender]
+
+    return jsonify({
+        "total": len(STARS),
+        "filtered": len(stars),
+        "stars": stars
+    })
+
 
 if __name__ == "__main__":
     print(f"=" * 50)
-    print(f"明星脸库 Flask 管理服务")
+    print(f"明星脸库 Flask 管理服务（仅管理，不含业务接口）")
     print(f"=" * 50)
     print(f"服务地址: http://{FLASK_HOST}:{FLASK_PORT}")
     print(f"人员库ID: {GROUP_ID}")
@@ -209,8 +159,15 @@ if __name__ == "__main__":
     print(f"  POST /api/stars/add        - 添加单个明星")
     print(f"  POST /api/stars/add_batch  - 批量添加明星")
     print(f"  GET  /api/stars/list       - 查看已入库明星")
-    print(f"  POST /api/face/search      - 人脸搜索（核心）")
+    print(f"  GET  /api/stars/data       - 获取本地明星数据")
     print(f"  POST /api/star/delete      - 删除明星")
     print(f"  POST /api/group/delete     - 删除人员库")
+    print(f"=" * 50)
+    print(f"业务接口已迁移至 uniCloud 云函数 faceSearch:")
+    print(f"  action=detectAndSearch - 人脸检测+搜索")
+    print(f"  action=search          - 人脸搜索（跳过质量检测）")
+    print(f"  action=compare         - 夫妻相/闺蜜相比对(DetectFaceSimilarity)")
+    print(f"  action=searchGender    - 跨性别明星脸搜索")
+    print(f"  action=getStars        - 获取明星图鉴数据")
     print(f"=" * 50)
     app.run(host=FLASK_HOST, port=FLASK_PORT, debug=True)

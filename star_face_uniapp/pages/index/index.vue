@@ -4,8 +4,8 @@
       <view class="logo-wrap">
         <text class="logo-icon">🌟</text>
       </view>
-      <text class="title">明星撞脸</text>
-      <text class="subtitle">上传正脸照，发现你的明星脸</text>
+      <text class="title">明星脸比对</text>
+      <text class="subtitle">上传正脸照/侧脸照，发现你的明星脸</text>
     </view>
 
     <view class="image-card" @click="showChooseAction">
@@ -14,7 +14,7 @@
         <view class="upload-icon-circle">
           <text class="upload-icon">📸</text>
         </view>
-        <text class="upload-text">点击上传正脸照</text>
+        <text class="upload-text">点击上传正脸照/侧脸照</text>
         <view class="upload-tips">
           <text class="upload-tip-item">✨ 正面拍摄效果更佳</text>
           <text class="upload-tip-item">✨ 光线均匀，素颜更佳</text>
@@ -47,9 +47,6 @@
       </view>
     </view>
 
-    <view class="tip-wrap">
-      <text class="tip-text">{{ tipText }}</text>
-    </view>
 
     <button class="compare-btn" :disabled="loading || !hasImage" @click="startCompare">
       <text v-if="loading">⏳ 正在比对中...</text>
@@ -62,6 +59,65 @@
         <text class="privacy-icon">🔒</text>
         <text class="privacy-text">人脸数据仅用于本次比对，不做他用</text>
       </view>
+      <text class="disclaimer-text">比对结果仅供娱乐</text>
+    </view>
+
+    <view class="float-ball" @click="toggleFeatureMenu">
+      <text class="float-ball-icon">🎮</text>
+      <text class="float-ball-text">更多玩法</text>
+    </view>
+    <view class="feature-menu" v-if="showFeatureMenu" @click="closeFeatureMenu">
+      <view class="feature-menu-panel" @click.stop="">
+        <view class="feature-menu-item" @click="goCrossGender">
+          <view class="feature-menu-icon cross-bg">
+            <text class="feature-menu-emoji">🌈</text>
+          </view>
+          <view class="feature-menu-info">
+            <text class="feature-menu-name">跨性别撞脸</text>
+            <text class="feature-menu-desc">看看异性明星中谁最像你</text>
+          </view>
+          <text class="feature-menu-arrow">›</text>
+        </view>
+        <view class="feature-menu-divider"></view>
+        <view class="feature-menu-item" @click="goAbout">
+          <view class="feature-menu-icon about-bg">
+            <text class="feature-menu-emoji">💡</text>
+          </view>
+          <view class="feature-menu-info">
+            <text class="feature-menu-name">关于</text>
+            <text class="feature-menu-desc">积分规则与玩法介绍</text>
+          </view>
+          <text class="feature-menu-arrow">›</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="score-modal" v-if="showScoreModal" @click="showScoreModal = false">
+      <view class="score-modal-panel" @click.stop="">
+        <text class="score-modal-title">获取积分</text>
+        <view class="score-modal-body">
+          <view class="score-modal-item">
+            <text class="score-modal-item-icon">📤</text>
+            <view class="score-modal-item-info">
+              <text class="score-modal-item-name">分享给好友</text>
+              <text class="score-modal-item-desc">好友打开后双方各得5积分</text>
+            </view>
+            <text class="score-modal-item-score">+5</text>
+          </view>
+          <view class="score-modal-item">
+            <text class="score-modal-item-icon">🎬</text>
+            <view class="score-modal-item-info">
+              <text class="score-modal-item-name">观看视频广告</text>
+              <text class="score-modal-item-desc">观看短视频即可获得5积分</text>
+            </view>
+            <text class="score-modal-item-score">+5</text>
+          </view>
+        </view>
+        <view class="score-modal-btns">
+          <button class="score-modal-btn share-btn-modal" open-type="share" @click="showScoreModal = false">分享好友</button>
+          <button class="score-modal-btn ad-btn-modal" @click="showScoreModal = false; showAd()">观看视频</button>
+        </view>
+      </view>
     </view>
 
     <!-- 用于图片压缩的隐藏canvas -->
@@ -71,6 +127,7 @@
 
 <script>
 import AdUtil from '@/common/AdUtil.js';
+import shareUtil from '@/common/shareUtil.js';
 
 export default {
   // 页面数据定义
@@ -79,21 +136,22 @@ export default {
       tempImagePath: '',           // 用户选择的图片临时路径
       hasImage: false,             // 是否已选择图片
       loading: false,              // 是否正在处理中
-      tipText: '上传一张正脸照片，看看你和哪位明星最像',  // 提示文本
+      tipText: '让生活多一点乐趣',  // 提示文本
       uploadedPhotoUrl: '',        // 上传到云存储后的图片URL，用于结果页展示和分享
       canvasWidth: 800,            // canvas宽度，动态设置
       canvasHeight: 800,           // canvas高度，动态设置
-      score: 0,                    // 用户积分
-      isFirstShow: true            // 标记是否是首次显示
+      score: 0,
+      isFirstShow: true,
+      showFeatureMenu: false,
+      showScoreModal: false
     }
   },
 
   // 页面加载时触发
   onLoad(op) {
-    let shareId = op.shareId;
+    let shareId = op ? op.shareId : '';
     console.info('是否分享:', shareId);
     
-    // 等待全局登录完成后再获取积分
     const app = getApp();
     if (app.globalData.loginPromise) {
       app.globalData.loginPromise.then(() => {
@@ -102,23 +160,11 @@ export default {
         this.getScore();
       });
     } else {
-      // 如果登录已完成，直接获取积分
       this.getScore();
     }
     
     this.initAd();
-    
-    setTimeout(() => {
-      if (shareId) {
-        let url = this.$app.apiPath.common.shareUser + "?shareUserId=" + shareId;
-        this.$app.post(url).then(res => {
-          if (res.code == 200) {
-            console.log('分享加分成功');
-          }
-        }, err => {
-        })
-      }
-    }, 10000);
+    shareUtil.handleShareBonus(this.$app, shareId);
   },
 
   onShow() {
@@ -131,20 +177,11 @@ export default {
 
   // 分享给朋友时的配置
   onShareAppMessage() {
-    let shareId = uni.getStorageSync("mySelfShareId");
-    return {
-      title: '明星撞脸 - 看看你和哪位明星最像',
-      path: '/pages/index/index?shareId=' + shareId
-    }
+    return shareUtil.getShareConfig('明星脸比对 - 看看你和哪位明星最像', '/pages/index/index');
   },
 
-  // 分享到朋友圈时的配置
   onShareTimeline() {
-    let shareId = uni.getStorageSync("mySelfShareId");
-    return {
-      title: '明星撞脸 - 看看你和哪位明星最像',
-      query: 'shareId=' + shareId
-    }
+    return shareUtil.getTimelineConfig('明星脸比对 - 看看你和哪位明星最像');
   },
 
   methods: {
@@ -167,23 +204,7 @@ export default {
 
     // 显示积分获取提示
     showScoreTips() {
-      var that = this;
-      uni.showModal({
-        title: '获取积分方式',
-        content: '1. 分享给好友可获得5积分\n2. 观看视频广告可获得5积分',
-        confirmText: '观看视频',
-        cancelText: '分享好友',
-        success: function(res) {
-          if (res.confirm) {
-            that.showAd();
-          } else if (res.cancel) {
-            uni.showToast({
-              title: '请点击右上角分享',
-              icon: 'none'
-            });
-          }
-        }
-      });
+      this.showScoreModal = true
     },
 
     // 初始化激励视频广告
@@ -306,22 +327,7 @@ export default {
 
       // 检查积分
       if (that.score < 5) {
-        uni.showModal({
-          title: '积分不足',
-          content: '您的积分不足，分享或观看视频可获得5积分！',
-          cancelText: '观看视频',
-          confirmText: '分享好友',
-          success: function(res) {
-            if (res.confirm) {
-              uni.showToast({
-                title: '请点击右上角分享',
-                icon: 'none'
-              })
-            } else if (res.cancel) {
-              that.showAd()
-            }
-          }
-        })
+        that.showScoreModal = true
         return
       }
 
@@ -618,6 +624,24 @@ export default {
     resetState() {
       this.loading = false
       this.tipText = '照片已选择，点击「开始比对」看看结果'
+    },
+
+    goCrossGender() {
+      this.showFeatureMenu = false
+      uni.navigateTo({ url: '/pages/cross-gender/cross-gender' })
+    },
+
+    goAbout() {
+      this.showFeatureMenu = false
+      uni.navigateTo({ url: '/pages/about/about' })
+    },
+
+    toggleFeatureMenu() {
+      this.showFeatureMenu = !this.showFeatureMenu
+    },
+
+    closeFeatureMenu() {
+      this.showFeatureMenu = false
     }
   }
 }
@@ -834,7 +858,7 @@ export default {
   color: #999;
 }
 
-.footer { margin-top: 50rpx; }
+.footer { margin-top: 50rpx; display: flex; flex-direction: column; align-items: center; gap: 12rpx; }
 
 .privacy-badge {
   display: flex;
@@ -846,4 +870,189 @@ export default {
 
 .privacy-icon { font-size: 24rpx; margin-right: 10rpx; }
 .privacy-text { font-size: 20rpx; color: #999; }
+
+.disclaimer-text { font-size: 20rpx; color: #bbb; }
+
+.float-ball {
+  position: fixed;
+  right: 10rpx;
+  top: 100rpx;
+  padding: 6rpx 14rpx 6rpx 18rpx;
+  border-radius: 50rpx;
+  background: linear-gradient(135deg, #ff6b9d 0%, #c471ed 100%);
+  box-shadow: 0 8rpx 30rpx rgba(255, 107, 157, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  z-index: 999;
+}
+
+.float-ball-icon { font-size: 30rpx; }
+
+.float-ball-text { font-size: 22rpx; color: #fff; font-weight: 700; white-space: nowrap; }
+
+.feature-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 200rpx;
+}
+
+.feature-menu-panel {
+  width: 600rpx;
+  background: #fff;
+  border-radius: 28rpx;
+  padding: 16rpx 0;
+  box-shadow: 0 16rpx 60rpx rgba(0, 0, 0, 0.2);
+}
+
+.feature-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 28rpx 32rpx;
+}
+
+.feature-menu-icon {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.about-bg {
+  background: linear-gradient(135deg, #fff5e0 0%, #ffe8d0 100%);
+}
+
+.cross-bg {
+  background: linear-gradient(135deg, #e0e8ff 0%, #d0d8ff 100%);
+}
+
+.feature-menu-emoji { font-size: 36rpx; }
+
+.feature-menu-info {
+  flex: 1;
+  margin-left: 20rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.feature-menu-name {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #333;
+}
+
+.feature-menu-desc {
+  font-size: 22rpx;
+  color: #999;
+}
+
+.feature-menu-arrow {
+  font-size: 36rpx;
+  color: #ccc;
+  font-weight: 300;
+  margin-left: 10rpx;
+}
+
+.feature-menu-divider {
+  height: 1rpx;
+  background: #f0f0f0;
+  margin: 0 32rpx;
+}
+
+.score-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.score-modal-panel {
+  width: 600rpx;
+  background: #fff;
+  border-radius: 28rpx;
+  padding: 40rpx 36rpx;
+}
+
+.score-modal-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #333;
+  text-align: center;
+  display: block;
+  margin-bottom: 30rpx;
+}
+
+.score-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  margin-bottom: 30rpx;
+}
+
+.score-modal-item {
+  display: flex;
+  align-items: center;
+  padding: 20rpx;
+  background: #fafafa;
+  border-radius: 16rpx;
+}
+
+.score-modal-item-icon { font-size: 40rpx; flex-shrink: 0; }
+
+.score-modal-item-info {
+  flex: 1;
+  margin-left: 16rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.score-modal-item-name { font-size: 28rpx; font-weight: 700; color: #333; }
+.score-modal-item-desc { font-size: 22rpx; color: #999; }
+.score-modal-item-score { font-size: 30rpx; font-weight: 700; color: #ff6b9d; flex-shrink: 0; margin-left: 16rpx; }
+
+.score-modal-btns {
+  display: flex;
+  gap: 20rpx;
+}
+
+.score-modal-btn {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  font-size: 28rpx;
+  font-weight: 700;
+  border-radius: 40rpx;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.share-btn-modal {
+  background: linear-gradient(135deg, #ff6b9d, #c471ed);
+  color: #fff;
+}
+
+.ad-btn-modal {
+  background: #f5f5f5;
+  color: #666;
+}
 </style>

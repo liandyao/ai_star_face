@@ -149,3 +149,7 @@ python scrape_category.py 0004 oumei
 - **后台**：Flask (Python)（仅批量管理人员库）
 - **人脸识别**：腾讯云 IAI（人脸搜索 3.0）
 - **数据爬取**：BeautifulSoup + pypinyin
+
+## 后续扩展
+- 人脸试妆产品正式上线，欢迎接入美颜、试唇色等AI能力。
+- 人像变换产品正式上线，欢迎接入动漫化、人像渐变、变老变年轻、变性别等AI能力。

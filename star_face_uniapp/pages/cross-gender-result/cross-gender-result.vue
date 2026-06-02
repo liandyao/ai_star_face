@@ -1,8 +1,8 @@
 <template>
   <view class="container">
     <view class="header">
-      <text class="header-title">✨ 比对结果</text>
-      <text class="header-subtitle">发现你的明星脸</text>
+      <text class="header-title">✨ 跨性别撞脸结果</text>
+      <text class="header-subtitle">{{ subtitleText }}</text>
     </view>
 
     <view class="compare-card">
@@ -30,7 +30,7 @@
 
     <view class="top-card" v-if="topStar.name">
       <view class="top-badge">🏆 最匹配</view>
-      <text class="result-label">你与 {{ topStar.name }} 最像</text>
+      <text class="result-label">{{ resultLabel }}</text>
       <view class="star-photo-wrap" v-if="topStar.url">
         <image class="star-photo" :src="topStar.url" mode="aspectFill" />
         <view class="score-overlay">
@@ -38,17 +38,7 @@
           <text class="score-unit">分</text>
         </view>
       </view>
-      <view class="star-photo-wrap" v-else>
-        <view class="star-photo-placeholder">
-          <text class="star-photo-text">{{ topStar.name.substring(0, 1) }}</text>
-        </view>
-        <view class="score-overlay">
-          <text class="score-value">{{ topStar.score }}</text>
-          <text class="score-unit">分</text>
-        </view>
-      </view>
       <text class="star-name">{{ topStar.name }}</text>
-      <text class="star-remark" v-if="topStar.remark">{{ topStar.remark }}</text>
       <view class="score-bar-wrap">
         <view class="score-labels">
           <text class="score-label">相似度</text>
@@ -57,6 +47,9 @@
         <view class="score-bar-bg">
           <view class="score-bar-fill" :style="{ width: scorePercent + '%' }"></view>
         </view>
+      </view>
+      <view class="fun-text-wrap">
+        <text class="fun-text">{{ funText }}</text>
       </view>
     </view>
 
@@ -78,7 +71,6 @@
           </view>
           <view class="other-info">
             <text class="other-name">{{ item.name }}</text>
-            <text class="other-remark" v-if="item.remark">{{ item.remark }}</text>
           </view>
           <view class="other-score-wrap">
             <text class="other-score-value">{{ item.score }}</text>
@@ -95,7 +87,11 @@
       </button>
       <button class="re-test-btn" @tap="reTest">
         <text class="retest-icon">🔄</text>
-        <text class="retest-text">开始比对</text>
+        <text class="retest-text">再测一次</text>
+      </button>
+      <button class="home-btn" @tap="goHome">
+        <text class="home-icon">🏠</text>
+        <text class="home-text">返回首页</text>
       </button>
     </view>
 
@@ -106,6 +102,16 @@
         <view class="more-features-line"></view>
       </view>
       <view class="more-features-list">
+        <view class="more-feature-item" @click="goStarFace">
+          <view class="more-feature-icon star-bg">
+            <text class="more-feature-emoji">🌟</text>
+          </view>
+          <view class="more-feature-info">
+            <text class="more-feature-name">明星脸比对</text>
+            <text class="more-feature-desc">看看你和哪位明星最像</text>
+          </view>
+          <text class="more-feature-arrow">›</text>
+        </view>
         <view class="more-feature-item" @click="goCouple">
           <view class="more-feature-icon couple-bg">
             <text class="more-feature-emoji">💑</text>
@@ -116,21 +122,7 @@
           </view>
           <text class="more-feature-arrow">›</text>
         </view>
-        <view class="more-feature-item" @click="goCrossGender">
-          <view class="more-feature-icon cross-bg">
-            <text class="more-feature-emoji">🌈</text>
-          </view>
-          <view class="more-feature-info">
-            <text class="more-feature-name">跨性别撞脸</text>
-            <text class="more-feature-desc">看看异性明星中谁最像你</text>
-          </view>
-          <text class="more-feature-arrow">›</text>
-        </view>
       </view>
-    </view>
-
-    <view class="result-footer">
-      <text class="result-disclaimer">比对结果仅供娱乐</text>
     </view>
   </view>
 </template>
@@ -138,18 +130,47 @@
 <script>
 import shareUtil from '@/common/shareUtil.js';
 export default {
-  // 页面数据定义
   data() {
     return {
-      results: [],         // 所有比对结果数组
-      topStar: {},         // 最相似的明星信息
-      otherStars: [],      // 其他相似明星列表
-      scorePercent: 0,     // 相似度百分比，用于进度条显示
-      userPhotoUrl: ''     // 用户上传的照片URL，用于对比展示和分享
+      results: [],
+      topStar: {},
+      otherStars: [],
+      scorePercent: 0,
+      userPhotoUrl: '',
+      userGender: 1
     }
   },
 
-  // 页面加载时从本地存储读取比对结果
+  computed: {
+    subtitleText() {
+      if (this.userGender === 1) {
+        return '如果你变成女生，会撞脸哪位女星？';
+      }
+      return '如果你变成男生，会撞脸哪位男星？';
+    },
+
+    resultLabel() {
+      if (this.userGender === 1) {
+        return '如果你是女生，最像 ' + this.topStar.name;
+      }
+      return '如果你是男生，最像 ' + this.topStar.name;
+    },
+
+    funText() {
+      var name = this.topStar.name || '';
+      var score = this.scorePercent || 0;
+      if (this.userGender === 1) {
+        if (score >= 70) return '哇！你变成女生简直就是' + name + '本人！这颜值绝了~';
+        if (score >= 50) return '你变成女生和' + name + '有几分神似，异性缘一定很好！';
+        return '你变成女生有自己的独特气质，和' + name + '有微妙的相似~';
+      } else {
+        if (score >= 70) return '天哪！你变成男生就是' + name + '翻版！帅气值拉满！';
+        if (score >= 50) return '你变成男生和' + name + '颇有几分相似，帅气挡不住！';
+        return '你变成男生有自己独特的魅力，和' + name + '有几分神似~';
+      }
+    }
+  },
+
   onLoad(op) {
     var shareId = op ? op.shareId : '';
     this.loadResults();
@@ -159,7 +180,10 @@ export default {
   onShareAppMessage() {
     var name = this.topStar.name || '明星';
     var score = this.scorePercent || 0;
-    var config = shareUtil.getShareConfig('我和' + name + '相似度' + score + '%，快来测测你的明星脸！', '/pages/index/index');
+    var title = this.userGender === 1
+      ? '如果我变成女生，最像' + name + '（相似度' + score + '%）！快来测测你的跨性别明星脸~'
+      : '如果我变成男生，最像' + name + '（相似度' + score + '%）！快来测测你的跨性别明星脸~';
+    var config = shareUtil.getShareConfig(title, '/pages/cross-gender/cross-gender');
     if (this.userPhotoUrl) {
       config.imageUrl = this.userPhotoUrl;
     }
@@ -169,7 +193,10 @@ export default {
   onShareTimeline() {
     var name = this.topStar.name || '明星';
     var score = this.scorePercent || 0;
-    var config = shareUtil.getTimelineConfig('我和' + name + '相似度' + score + '%，快来测测你的明星脸！');
+    var title = this.userGender === 1
+      ? '如果我变成女生，最像' + name + '（相似度' + score + '%）！'
+      : '如果我变成男生，最像' + name + '（相似度' + score + '%）！';
+    var config = shareUtil.getTimelineConfig(title);
     if (this.userPhotoUrl) {
       config.imageUrl = this.userPhotoUrl;
     }
@@ -177,69 +204,42 @@ export default {
   },
 
   methods: {
-    // 从本地存储加载比对结果和用户照片
     loadResults() {
       try {
-        // 读取比对结果
-        var data = uni.getStorageSync('faceResults')
+        var data = uni.getStorageSync('crossGenderResults');
         if (data && data.length > 0) {
-          this.results = data
-          this.topStar = data[0]                    // 第一个是最相似的明星
-          this.otherStars = data.slice(1)           // 其余的是其他相似明星
-          var score = this.topStar.score || 0
-          // 将分数转换为百分比，最高100%
-          this.scorePercent = score > 100 ? 100 : Math.floor(score)
-
-          this.saveCollectedStar(this.topStar)
-        } else {
-          uni.showToast({ title: '未获取到比对结果', icon: 'none' })
+          this.results = data;
+          this.topStar = data[0];
+          this.otherStars = data.slice(1);
+          var score = this.topStar.score || 0;
+          this.scorePercent = score > 100 ? 100 : Math.floor(score);
         }
 
-        // 读取用户上传的照片URL
-        var photoUrl = uni.getStorageSync('userPhotoUrl')
-        if (photoUrl) {
-          this.userPhotoUrl = photoUrl
-        }
+        var photoUrl = uni.getStorageSync('crossGenderUserPhoto');
+        if (photoUrl) this.userPhotoUrl = photoUrl;
+
+        var gender = uni.getStorageSync('crossGenderUserGender');
+        if (gender) this.userGender = gender;
       } catch (e) {
-        console.error('读取结果失败', e)
-        uni.showToast({ title: '数据加载失败', icon: 'none' })
+        console.error('读取结果失败', e);
+        uni.showToast({ title: '数据加载失败', icon: 'none' });
       }
     },
 
-    saveCollectedStar(star) {
-      if (!star || !star.person_id) return;
-      try {
-        var collected = uni.getStorageSync('collectedStars') || [];
-        var exists = collected.some(function(item) {
-          return item.person_id === star.person_id;
-        });
-        if (!exists) {
-          collected.push({
-            person_id: star.person_id,
-            name: star.name,
-            url: star.url || '',
-            score: star.score || 0,
-            gender: star.gender || 0,
-            collected_at: Date.now()
-          });
-          uni.setStorageSync('collectedStars', collected);
-        }
-      } catch (e) {
-        console.error('保存收集数据失败:', e);
-      }
-    },
-
-    // 重新测试：返回首页
     reTest() {
-      uni.reLaunch({ url: '/pages/index/index' })
+      uni.reLaunch({ url: '/pages/cross-gender/cross-gender' });
+    },
+
+    goHome() {
+      uni.reLaunch({ url: '/pages/index/index' });
+    },
+
+    goStarFace() {
+      uni.switchTab({ url: '/pages/index/index' });
     },
 
     goCouple() {
-      uni.switchTab({ url: '/pages/couple/couple' })
-    },
-
-    goCrossGender() {
-      uni.navigateTo({ url: '/pages/cross-gender/cross-gender' })
+      uni.switchTab({ url: '/pages/couple/couple' });
     }
   }
 }
@@ -253,27 +253,27 @@ export default {
   padding: 40rpx 30rpx;
   box-sizing: border-box;
   min-height: 100vh;
-  background: linear-gradient(180deg, #fff0f5 0%, #fff5f8 40%, #fafafa 100%);
+  background: linear-gradient(180deg, #f0f0ff 0%, #fff0f5 40%, #fafafa 100%);
 }
 
 .header {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 40rpx;
+  margin-bottom: 30rpx;
 }
 
 .header-title {
   font-size: 44rpx;
   font-weight: 800;
-  color: #ff6b9d;
+  color: #667eea;
   margin-bottom: 8rpx;
 }
 
 .header-subtitle {
   font-size: 24rpx;
-  color: #999;
-  letter-spacing: 1rpx;
+  color: #764ba2;
+  font-weight: 600;
 }
 
 .compare-card {
@@ -281,14 +281,14 @@ export default {
   background: #fff;
   border-radius: 40rpx;
   padding: 30rpx;
-  box-shadow: 0 12rpx 40rpx rgba(255, 107, 157, 0.2);
+  box-shadow: 0 12rpx 40rpx rgba(102, 126, 234, 0.2);
   margin-bottom: 30rpx;
 }
 
 .compare-title {
   font-size: 28rpx;
   font-weight: 700;
-  color: #ff6b9d;
+  color: #667eea;
   text-align: center;
   margin-bottom: 24rpx;
 }
@@ -318,7 +318,7 @@ export default {
   width: 200rpx;
   height: 240rpx;
   border-radius: 24rpx;
-  box-shadow: 0 8rpx 24rpx rgba(255, 107, 157, 0.25);
+  box-shadow: 0 8rpx 24rpx rgba(102, 126, 234, 0.25);
   background-color: #f5f5f5;
 }
 
@@ -326,16 +326,16 @@ export default {
   width: 200rpx;
   height: 240rpx;
   border-radius: 24rpx;
-  background: linear-gradient(135deg, #ffe0ec 0%, #ffd0e0 100%);
+  background: linear-gradient(135deg, #e8e0ff 0%, #d0c0ff 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8rpx 24rpx rgba(255, 107, 157, 0.25);
+  box-shadow: 0 8rpx 24rpx rgba(102, 126, 234, 0.25);
 }
 
 .compare-photo-text {
   font-size: 80rpx;
-  color: #ff6b9d;
+  color: #667eea;
   font-weight: 800;
 }
 
@@ -348,11 +348,11 @@ export default {
 .vs-icon {
   font-size: 28rpx;
   font-weight: 800;
-  color: #fff1f6;
-  background: linear-gradient(135deg, #ff6b9d 0%, #ff4757 100%);
+  color: #fff;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 12rpx 20rpx;
   border-radius: 50%;
-  box-shadow: 0 4rpx 16rpx rgba(255, 71, 87, 0.3);
+  box-shadow: 0 4rpx 16rpx rgba(102, 126, 234, 0.3);
 }
 
 .top-card {
@@ -360,7 +360,7 @@ export default {
   background: #fff;
   border-radius: 40rpx;
   padding: 40rpx 30rpx;
-  box-shadow: 0 12rpx 40rpx rgba(255, 107, 157, 0.2);
+  box-shadow: 0 12rpx 40rpx rgba(102, 126, 234, 0.2);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -368,19 +368,20 @@ export default {
 }
 
 .top-badge {
-  background: linear-gradient(135deg, #ff6b9d 0%, #ff4757 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
   font-size: 24rpx;
   font-weight: 700;
   padding: 10rpx 28rpx;
   border-radius: 36rpx;
-  box-shadow: 0 6rpx 20rpx rgba(255, 71, 87, 0.3);
+  box-shadow: 0 6rpx 20rpx rgba(102, 126, 234, 0.3);
 }
 
 .result-label {
-  font-size: 32rpx;
+  font-size: 30rpx;
   font-weight: 700;
   color: #333;
+  text-align: center;
 }
 
 .star-photo-wrap {
@@ -395,24 +396,7 @@ export default {
   width: 360rpx;
   height: 440rpx;
   border-radius: 36rpx;
-  box-shadow: 0 12rpx 40rpx rgba(255, 107, 157, 0.3);
-}
-
-.star-photo-placeholder {
-  width: 360rpx;
-  height: 440rpx;
-  border-radius: 36rpx;
-  background: linear-gradient(135deg, #ffe0ec 0%, #ffd0e0 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 12rpx 40rpx rgba(255, 107, 157, 0.3);
-}
-
-.star-photo-text {
-  font-size: 160rpx;
-  color: #ff6b9d;
-  font-weight: 800;
+  box-shadow: 0 12rpx 40rpx rgba(102, 126, 234, 0.3);
 }
 
 .score-overlay {
@@ -420,13 +404,13 @@ export default {
   bottom: -20rpx;
   left: 50%;
   transform: translateX(-50%);
-  background: linear-gradient(135deg, #ff6b9d 0%, #ff4757 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
   padding: 12rpx 32rpx;
   border-radius: 36rpx;
   display: flex;
   align-items: baseline;
-  box-shadow: 0 8rpx 24rpx rgba(255, 71, 87, 0.4);
+  box-shadow: 0 8rpx 24rpx rgba(102, 126, 234, 0.4);
 }
 
 .score-value {
@@ -442,18 +426,9 @@ export default {
 .star-name {
   font-size: 40rpx;
   font-weight: 800;
-  color: #ff6b9d;
+  color: #667eea;
   text-align: center;
   margin-top: 10rpx;
-}
-
-.star-remark {
-  font-size: 22rpx;
-  color: #999;
-  text-align: center;
-  background: #f5f5f5;
-  padding: 8rpx 20rpx;
-  border-radius: 24rpx;
 }
 
 .score-bar-wrap {
@@ -477,7 +452,7 @@ export default {
 .score-percent {
   font-size: 24rpx;
   font-weight: 700;
-  color: #ff6b9d;
+  color: #667eea;
 }
 
 .score-bar-bg {
@@ -490,9 +465,22 @@ export default {
 
 .score-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #ff6b9d, #ff4757);
+  background: linear-gradient(90deg, #667eea, #764ba2);
   border-radius: 10rpx;
   transition: width 1s ease;
+}
+
+.fun-text-wrap {
+  width: 100%;
+  background: #fafafa;
+  border-radius: 24rpx;
+  padding: 24rpx;
+}
+
+.fun-text {
+  font-size: 28rpx;
+  color: #666;
+  line-height: 1.6;
 }
 
 .no-result {
@@ -524,7 +512,7 @@ export default {
 .others-line {
   width: 60rpx;
   height: 4rpx;
-  background: linear-gradient(90deg, transparent, #ff6b9d, transparent);
+  background: linear-gradient(90deg, transparent, #667eea, transparent);
   border-radius: 2rpx;
 }
 
@@ -556,7 +544,7 @@ export default {
   height: 120rpx;
   border-radius: 20rpx;
   flex-shrink: 0;
-  box-shadow: 0 4rpx 16rpx rgba(255, 107, 157, 0.15);
+  box-shadow: 0 4rpx 16rpx rgba(102, 126, 234, 0.15);
 }
 
 .other-photo-placeholder {
@@ -564,7 +552,7 @@ export default {
   height: 120rpx;
   border-radius: 20rpx;
   flex-shrink: 0;
-  background: linear-gradient(135deg, #ffe0ec 0%, #ffd0e0 100%);
+  background: linear-gradient(135deg, #e8e0ff 0%, #d0c0ff 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -572,7 +560,7 @@ export default {
 
 .other-photo-text {
   font-size: 48rpx;
-  color: #ff6b9d;
+  color: #667eea;
   font-weight: 800;
 }
 
@@ -589,11 +577,6 @@ export default {
   color: #333;
 }
 
-.other-remark {
-  font-size: 20rpx;
-  color: #999;
-}
-
 .other-score-wrap {
   display: flex;
   align-items: baseline;
@@ -603,12 +586,12 @@ export default {
 .other-score-value {
   font-size: 32rpx;
   font-weight: 800;
-  color: #ff6b9d;
+  color: #667eea;
 }
 
 .other-score-unit {
   font-size: 20rpx;
-  color: #ff6b9d;
+  color: #667eea;
 }
 
 .actions {
@@ -623,26 +606,22 @@ export default {
   width: 100%;
   height: 88rpx;
   background: #fff;
-  color: #ff6b9d;
+  color: #667eea;
   font-size: 30rpx;
   font-weight: 700;
   border-radius: 44rpx;
-  border: 3rpx solid #ff6b9d;
+  border: 3rpx solid #667eea;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10rpx;
-  box-shadow: 0 4rpx 16rpx rgba(255, 107, 157, 0.2);
-}
-
-.share-icon {
-  font-size: 32rpx;
+  box-shadow: 0 4rpx 16rpx rgba(102, 126, 234, 0.2);
 }
 
 .re-test-btn {
   width: 100%;
   height: 88rpx;
-  background: linear-gradient(135deg, #ff6b9d 0%, #ff4757 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
   font-size: 30rpx;
   font-weight: 700;
@@ -652,11 +631,22 @@ export default {
   align-items: center;
   justify-content: center;
   gap: 10rpx;
-  box-shadow: 0 8rpx 24rpx rgba(255, 71, 87, 0.35);
+  box-shadow: 0 8rpx 24rpx rgba(102, 126, 234, 0.35);
 }
 
-.retest-icon {
-  font-size: 32rpx;
+.home-btn {
+  width: 100%;
+  height: 88rpx;
+  background: #fff;
+  color: #999;
+  font-size: 28rpx;
+  font-weight: 600;
+  border-radius: 44rpx;
+  border: 2rpx solid #eee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
 }
 
 .more-features {
@@ -675,7 +665,7 @@ export default {
 .more-features-line {
   width: 60rpx;
   height: 4rpx;
-  background: linear-gradient(90deg, transparent, #ff6b9d, transparent);
+  background: linear-gradient(90deg, transparent, #667eea, transparent);
   border-radius: 2rpx;
 }
 
@@ -701,21 +691,18 @@ export default {
 }
 
 .more-feature-icon {
-  width: 72rpx;
-  height: 72rpx;
-  border-radius: 18rpx;
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 20rpx;
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-right: 20rpx;
   flex-shrink: 0;
 }
 
-.about-bg {
-  background: linear-gradient(135deg, #fff5e0 0%, #ffe8d0 100%);
-}
-
-.cross-bg {
-  background: linear-gradient(135deg, #e0e8ff 0%, #d0d8ff 100%);
+.star-bg {
+  background: linear-gradient(135deg, #fff0f5 0%, #ffe0ea 100%);
 }
 
 .couple-bg {
@@ -726,7 +713,6 @@ export default {
 
 .more-feature-info {
   flex: 1;
-  margin-left: 20rpx;
   display: flex;
   flex-direction: column;
   gap: 6rpx;
@@ -748,15 +734,5 @@ export default {
   color: #ccc;
   font-weight: 300;
   margin-left: 10rpx;
-}
-
-.result-footer {
-  margin-top: 30rpx;
-  margin-bottom: 40rpx;
-}
-
-.result-disclaimer {
-  font-size: 22rpx;
-  color: #bbb;
 }
 </style>

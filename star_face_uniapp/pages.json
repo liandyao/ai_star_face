@@ -3,8 +3,16 @@
     {
       "path": "pages/index/index",
       "style": {
-        "navigationBarTitleText": "明星撞脸",
+        "navigationBarTitleText": "明星脸比对",
         "navigationBarBackgroundColor": "#ff6b9d",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/couple/couple",
+      "style": {
+        "navigationBarTitleText": "夫妻相/闺蜜相",
+        "navigationBarBackgroundColor": "#c471ed",
         "navigationBarTextStyle": "white"
       }
     },
@@ -16,13 +24,67 @@
         "navigationBarTextStyle": "white",
         "enablePullDownRefresh": false
       }
+    },
+    {
+      "path": "pages/couple-result/couple-result",
+      "style": {
+        "navigationBarTitleText": "缘分比对结果",
+        "navigationBarBackgroundColor": "#c471ed",
+        "navigationBarTextStyle": "white",
+        "enablePullDownRefresh": false
+      }
+    },
+    {
+      "path": "pages/cross-gender/cross-gender",
+      "style": {
+        "navigationBarTitleText": "跨性别撞脸",
+        "navigationBarBackgroundColor": "#667eea",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/cross-gender-result/cross-gender-result",
+      "style": {
+        "navigationBarTitleText": "跨性别撞脸结果",
+        "navigationBarBackgroundColor": "#667eea",
+        "navigationBarTextStyle": "white",
+        "enablePullDownRefresh": false
+      }
+    },
+    {
+      "path": "pages/about/about",
+      "style": {
+        "navigationBarTitleText": "关于",
+        "navigationBarBackgroundColor": "#ff6b9d",
+        "navigationBarTextStyle": "white"
+      }
     }
   ],
   "globalStyle": {
     "navigationBarTextStyle": "white",
-    "navigationBarTitleText": "明星撞脸",
+    "navigationBarTitleText": "明星脸比对",
     "navigationBarBackgroundColor": "#ff6b9d",
     "backgroundColor": "#fff0f5"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#ff6b9d",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "明星脸",
+        "iconPath": "static/tab/star.png",
+        "selectedIconPath": "static/tab/star_active.png"
+      },
+      {
+        "pagePath": "pages/couple/couple",
+        "text": "夫妻相",
+        "iconPath": "static/tab/couple.png",
+        "selectedIconPath": "static/tab/couple_active.png"
+      }
+    ]
   },
   "usingComponents": {}
 }

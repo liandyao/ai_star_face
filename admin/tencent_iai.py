@@ -196,6 +196,38 @@ class TencentIAI:
         except TencentCloudSDKException as e:
             return {"Error": {"Code": e.code, "Message": e.message}}
 
+    def compare_face(self, image_a, image_b, image_a_type="URL", image_b_type="URL"):
+        """
+        人脸比对 - 比较两张照片的相似度
+        :param image_a: 图片A（URL或Base64）
+        :param image_b: 图片B（URL或Base64）
+        :param image_a_type: 图片A类型，"URL" 或 "BASE64"
+        :param image_b_type: 图片B类型，"URL" 或 "BASE64"
+        :return: 比对结果，包含相似度分数
+        """
+        client = get_client()
+        req = models.CompareFaceRequest()
+        if image_a_type == "BASE64":
+            req.ImageA = image_a
+        else:
+            req.UrlA = image_a
+        if image_b_type == "BASE64":
+            req.ImageB = image_b
+        else:
+            req.UrlB = image_b
+        req.QualityControl = 4
+        try:
+            resp = client.CompareFace(req)
+            return {
+                "Response": {
+                    "Score": round(resp.Score, 2),
+                    "FaceModelVersion": resp.FaceModelVersion,
+                    "RequestId": resp.RequestId
+                }
+            }
+        except TencentCloudSDKException as e:
+            return {"Error": {"Code": e.code, "Message": e.message}}
+
     def search_faces(self, group_id, image_url, top_k=5):
         """人脸搜索"""
         client = get_client()
