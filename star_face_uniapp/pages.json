@@ -52,9 +52,51 @@
       }
     },
     {
+      "path": "pages/beauty/beauty",
+      "style": {
+        "navigationBarTitleText": "颜值暴击",
+        "navigationBarBackgroundColor": "#ff9500",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/beauty-result/beauty-result",
+      "style": {
+        "navigationBarTitleText": "颜值鉴定结果",
+        "navigationBarBackgroundColor": "#ff9500",
+        "navigationBarTextStyle": "white",
+        "enablePullDownRefresh": false
+      }
+    },
+    {
+      "path": "pages/beauty-pk/beauty-pk",
+      "style": {
+        "navigationBarTitleText": "颜值PK",
+        "navigationBarBackgroundColor": "#ff4757",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/beauty-pk-result/beauty-pk-result",
+      "style": {
+        "navigationBarTitleText": "颜值PK结果",
+        "navigationBarBackgroundColor": "#ff4757",
+        "navigationBarTextStyle": "white",
+        "enablePullDownRefresh": false
+      }
+    },
+    {
       "path": "pages/about/about",
       "style": {
         "navigationBarTitleText": "关于",
+        "navigationBarBackgroundColor": "#ff6b9d",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/share-records/share-records",
+      "style": {
+        "navigationBarTitleText": "分享记录",
         "navigationBarBackgroundColor": "#ff6b9d",
         "navigationBarTextStyle": "white"
       }
@@ -83,6 +125,12 @@
         "text": "夫妻相",
         "iconPath": "static/tab/couple.png",
         "selectedIconPath": "static/tab/couple_active.png"
+      },
+      {
+        "pagePath": "pages/beauty-pk/beauty-pk",
+        "text": "颜值PK",
+        "iconPath": "static/tab/pk.png",
+        "selectedIconPath": "static/tab/pk_active.png"
       }
     ]
   },

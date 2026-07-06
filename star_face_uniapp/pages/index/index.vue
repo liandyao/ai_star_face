@@ -50,8 +50,7 @@
 
     <button class="compare-btn" :disabled="loading || !hasImage" @click="startCompare">
       <text v-if="loading">⏳ 正在比对中...</text>
-      <text v-else-if="score < 5">💎 积分不足(需要5积分)</text>
-      <text v-else>🔍 开始比对(消耗5积分)</text>
+      <text v-else>🔍 开始比对</text>
     </button>
 
     <view class="footer">
@@ -79,6 +78,17 @@
           <text class="feature-menu-arrow">›</text>
         </view>
         <view class="feature-menu-divider"></view>
+        <view class="feature-menu-item" @click="goBeauty">
+          <view class="feature-menu-icon beauty-bg">
+            <text class="feature-menu-emoji">🔥</text>
+          </view>
+          <view class="feature-menu-info">
+            <text class="feature-menu-name">颜值暴击</text>
+            <text class="feature-menu-desc">AI鉴定你的颜值等级</text>
+          </view>
+          <text class="feature-menu-arrow">›</text>
+        </view>
+        <view class="feature-menu-divider"></view>
         <view class="feature-menu-item" @click="goAbout">
           <view class="feature-menu-icon about-bg">
             <text class="feature-menu-emoji">💡</text>
@@ -86,6 +96,17 @@
           <view class="feature-menu-info">
             <text class="feature-menu-name">关于</text>
             <text class="feature-menu-desc">积分规则与玩法介绍</text>
+          </view>
+          <text class="feature-menu-arrow">›</text>
+        </view>
+        <view class="feature-menu-divider"></view>
+        <view class="feature-menu-item" @click="goShareRecords">
+          <view class="feature-menu-icon share-bg">
+            <text class="feature-menu-emoji">📋</text>
+          </view>
+          <view class="feature-menu-info">
+            <text class="feature-menu-name">分享记录</text>
+            <text class="feature-menu-desc">查看分享得分情况</text>
           </view>
           <text class="feature-menu-arrow">›</text>
         </view>
@@ -100,7 +121,7 @@
             <text class="score-modal-item-icon">📤</text>
             <view class="score-modal-item-info">
               <text class="score-modal-item-name">分享给好友</text>
-              <text class="score-modal-item-desc">好友打开后双方各得5积分</text>
+              <text class="score-modal-item-desc">新用户点击之后双方各得5积分</text>
             </view>
             <text class="score-modal-item-score">+5</text>
           </view>
@@ -128,6 +149,7 @@
 <script>
 import AdUtil from '@/common/AdUtil.js';
 import shareUtil from '@/common/shareUtil.js';
+import mediaCheckUtil from '@/common/mediaCheckUtil.js';
 
 export default {
   // 页面数据定义
@@ -143,7 +165,8 @@ export default {
       score: 0,
       isFirstShow: true,
       showFeatureMenu: false,
-      showScoreModal: false
+      showScoreModal: false,
+      pendingAction: ''
     }
   },
 
@@ -215,19 +238,26 @@ export default {
         that.$app.post(url).then(res => {
           if (res.code == 200) {
             that.score = that.score + 5;
-            console.log('成功修改');
-            uni.showToast({
-              title: '积分+5',
-              icon: 'success'
-            });
+            uni.showToast({ title: '积分+5', icon: 'success' });
           } else {
             console.log('后台报错500');
           }
+          that.tryPendingAction();
         }, err => {
           console.log('后台报错...');
           that.score = that.score + 5;
+          that.tryPendingAction();
         });
       });
+    },
+
+    // 看完广告后自动继续待执行的操作
+    tryPendingAction() {
+      var that = this;
+      if (that.pendingAction === 'compare') {
+        that.pendingAction = '';
+        setTimeout(function() { that.startCompare(); }, 500);
+      }
     },
 
     // 显示广告获取积分
@@ -325,8 +355,9 @@ export default {
       }
       if (that.loading) return
 
-      // 检查积分
+      // 检查积分，不足时弹窗引导
       if (that.score < 5) {
+        that.pendingAction = 'compare'
         that.showScoreModal = true
         return
       }
@@ -436,13 +467,31 @@ export default {
           // 支付宝云存储：文件权限为公共读时，直接拼接永久URL
           // 格式：https://环境ID.normal.cloudstatic.cn/文件路径
           that.uploadedPhotoUrl = 'https://env-00jy674l53ts.normal.cloudstatic.cn/' + cloudPath
-          that.readImageAndSearch(compressedPath)
+          that.checkUploadedImage(that.uploadedPhotoUrl, function() {
+            that.readImageAndSearch(compressedPath)
+          })
         },
         fail: function(err) {
           console.error('上传到云存储失败:', err)
-          // 上传失败仍然继续比对，只是结果页无法显示用户照片
-          that.readImageAndSearch(compressedPath)
+          that.resetState()
+          uni.showToast({ title: '上传失败，请重试', icon: 'none' })
         }
+      })
+    },
+
+    // 提交微信内容安全异步校验，满足用户上传图片审核要求
+    checkUploadedImage(url, successCallback) {
+      var that = this
+      that.tipText = '正在审核图片内容...'
+      mediaCheckUtil.check(url, that.$app).then(function() {
+        successCallback()
+      }).catch(function(err) {
+        that.resetState()
+        uni.showModal({
+          title: '图片审核失败',
+          content: err.message || '图片暂时无法通过安全校验，请更换照片',
+          showCancel: false
+        })
       })
     },
 
@@ -597,9 +646,8 @@ export default {
       }
 
       // 比对成功，调用后端扣分
-      let openid = uni.getStorageSync("openid");
-      let url = that.$app.apiPath.common.makePhoto + '?openid=' + openid;
-      that.$app.post(url).then(res => {
+      let url = that.$app.apiPath.common.useScore;
+      that.$app.post(url, { score: 5 }).then(res => {
         if (res.code == 200) {
           console.info('用户积分-5成功');
           that.getScore();
@@ -631,9 +679,24 @@ export default {
       uni.navigateTo({ url: '/pages/cross-gender/cross-gender' })
     },
 
+    goBeauty() {
+      this.showFeatureMenu = false
+      uni.navigateTo({ url: '/pages/beauty/beauty' })
+    },
+
+    goBeautyPk() {
+      this.showFeatureMenu = false
+      uni.switchTab({ url: '/pages/beauty-pk/beauty-pk' })
+    },
+
     goAbout() {
       this.showFeatureMenu = false
       uni.navigateTo({ url: '/pages/about/about' })
+    },
+
+    goShareRecords() {
+      this.showFeatureMenu = false
+      uni.navigateTo({ url: '/pages/share-records/share-records' })
     },
 
     toggleFeatureMenu() {
@@ -887,6 +950,20 @@ export default {
   z-index: 999;
 }
 
+.float-ball-pk {
+  position: fixed;
+  right: 10rpx;
+  top: 180rpx;
+  padding: 6rpx 14rpx 6rpx 18rpx;
+  border-radius: 50rpx;
+  background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%);
+  box-shadow: 0 8rpx 30rpx rgba(255, 71, 87, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  z-index: 999;
+}
+
 .float-ball-icon { font-size: 30rpx; }
 
 .float-ball-text { font-size: 22rpx; color: #fff; font-weight: 700; white-space: nowrap; }
@@ -933,8 +1010,20 @@ export default {
   background: linear-gradient(135deg, #fff5e0 0%, #ffe8d0 100%);
 }
 
+.share-bg {
+  background: linear-gradient(135deg, #e0f0ff 0%, #d0e8ff 100%);
+}
+
 .cross-bg {
   background: linear-gradient(135deg, #e0e8ff 0%, #d0d8ff 100%);
+}
+
+.beauty-bg {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+}
+
+.pk-bg {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
 }
 
 .feature-menu-emoji { font-size: 36rpx; }

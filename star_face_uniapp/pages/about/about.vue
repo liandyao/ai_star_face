@@ -54,7 +54,7 @@
           </view>
           <view class="play-info">
             <text class="play-name">明星脸比对</text>
-            <text class="play-desc">上传正脸照，AI帮你找出最像的明星，消耗5积分</text>
+            <text class="play-desc">上传正脸照，AI帮你找出最像的明星</text>
           </view>
         </view>
         <view class="play-item">
@@ -63,7 +63,7 @@
           </view>
           <view class="play-info">
             <text class="play-name">夫妻相/闺蜜相</text>
-            <text class="play-desc">上传双人照，测测你们的缘分指数，消耗5积分</text>
+            <text class="play-desc">上传双人照，测测你们的缘分指数</text>
           </view>
         </view>
         <view class="play-item">
@@ -72,7 +72,25 @@
           </view>
           <view class="play-info">
             <text class="play-name">跨性别撞脸</text>
-            <text class="play-desc">看看异性明星中谁最像你，消耗5积分，找不到不扣分</text>
+            <text class="play-desc">看看异性明星中谁最像你，找不到不扣分</text>
+          </view>
+        </view>
+        <view class="play-item">
+          <view class="play-icon-wrap beauty-bg">
+            <text class="play-icon">🔥</text>
+          </view>
+          <view class="play-info">
+            <text class="play-name">颜值暴击</text>
+            <text class="play-desc">上传照片，AI鉴定你的颜值等级</text>
+          </view>
+        </view>
+        <view class="play-item">
+          <view class="play-icon-wrap pk-bg">
+            <text class="play-icon">⚔️</text>
+          </view>
+          <view class="play-info">
+            <text class="play-name">颜值PK</text>
+            <text class="play-desc">上传两张照片，比比谁的颜值更高</text>
           </view>
         </view>
       </view>
@@ -213,6 +231,8 @@ export default {
 .star-bg { background: linear-gradient(135deg, #ff94d5 0%, #ff7ce3 100%); }
 .couple-bg { background: linear-gradient(135deg, #ffe0f0 0%, #e8d0ff 100%); }
 .cross-bg { background: linear-gradient(135deg, #e0e8ff 0%, #d0d8ff 100%); }
+.beauty-bg { background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); }
+.pk-bg { background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%); }
 
 .play-icon { font-size: 36rpx; }
 

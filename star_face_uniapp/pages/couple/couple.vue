@@ -62,14 +62,17 @@
 
     <button class="compare-btn" :disabled="loading || !imageA || !imageB" @click="startCompare">
       <text v-if="loading">⏳ 正在比对中...</text>
-      <text v-else-if="score < 5">💎 积分不足(需要5积分)</text>
-      <text v-else>💕 开始比对(消耗5积分)</text>
+      <text v-else>💕 开始比对</text>
     </button>
 
     <view class="footer">
       <view class="privacy-badge">
         <text class="privacy-icon">🔒</text>
         <text class="privacy-text">人脸数据仅用于本次比对，不做他用，结果仅供娱乐！</text>
+      </view>
+      <view class="pk-link" @click="goBeautyPk">
+        <text class="pk-link-icon">⚔️</text>
+        <text class="pk-link-text">还想比颜值？试试颜值PK →</text>
       </view>
     </view>
 
@@ -81,7 +84,7 @@
             <text class="score-modal-item-icon">📤</text>
             <view class="score-modal-item-info">
               <text class="score-modal-item-name">分享给好友</text>
-              <text class="score-modal-item-desc">好友打开后双方各得5积分</text>
+              <text class="score-modal-item-desc">新用户点击之后双方各得5积分</text>
             </view>
             <text class="score-modal-item-score">+5</text>
           </view>
@@ -108,6 +111,7 @@
 <script>
 import AdUtil from '@/common/AdUtil.js';
 import shareUtil from '@/common/shareUtil.js';
+import mediaCheckUtil from '@/common/mediaCheckUtil.js';
 
 export default {
   data() {
@@ -122,7 +126,8 @@ export default {
       currentChoose: 'a',
       uploadedUrlA: '',
       uploadedUrlB: '',
-      showScoreModal: false
+      showScoreModal: false,
+      pendingAction: ''
     }
   },
 
@@ -175,16 +180,30 @@ export default {
             that.score = that.score + 5;
             uni.showToast({ title: '积分+5', icon: 'success' });
           }
+          that.tryPendingAction();
         }, err => {
           that.score = that.score + 5;
+          that.tryPendingAction();
         });
       });
+    },
+
+    tryPendingAction() {
+      var that = this;
+      if (that.pendingAction === 'compare') {
+        that.pendingAction = '';
+        setTimeout(function() { that.startCompare(); }, 500);
+      }
     },
 
     showAd() {
       uni.showLoading({ title: '正在加载...' });
       AdUtil.rewarded.show();
       setTimeout(() => { uni.hideLoading(); }, 2000);
+    },
+
+    goBeautyPk() {
+      uni.switchTab({ url: '/pages/beauty-pk/beauty-pk' });
     },
 
     chooseImage(side) {
@@ -337,6 +356,10 @@ export default {
       });
     },
 
+    checkUploadedImage(url) {
+      return mediaCheckUtil.check(url, this.$app);
+    },
+
     startCompare() {
       var that = this;
 
@@ -347,6 +370,7 @@ export default {
       if (that.loading) return;
 
       if (that.score < 5) {
+        that.pendingAction = 'compare';
         that.showScoreModal = true;
         return;
       }
@@ -367,12 +391,23 @@ export default {
           ]).then(function(urls) {
             that.uploadedUrlA = urls[0];
             that.uploadedUrlB = urls[1];
+            return Promise.all([
+              that.checkUploadedImage(urls[0]),
+              that.checkUploadedImage(urls[1])
+            ]).then(function() {
+              return urls;
+            });
+          }).then(function(urls) {
             that.callCompare(urls[0], urls[1]);
           }).catch(function(err) {
-            console.error('上传失败:', err);
+            console.error('上传或审核失败:', err);
             that.loading = false;
             that.tipText = '上传失败，请重试';
-            uni.showToast({ title: '上传失败', icon: 'none' });
+            uni.showModal({
+              title: '图片审核失败',
+              content: err.message || '图片暂时无法通过安全校验，请更换照片',
+              showCancel: false
+            });
           });
         });
       });
@@ -404,9 +439,8 @@ export default {
 
           var data = result.data || {};
 
-          let openid = uni.getStorageSync("openid");
-          let scoreUrl = that.$app.apiPath.common.makePhoto + '?openid=' + openid;
-          that.$app.post(scoreUrl).then(function(res2) {
+          let scoreUrl = that.$app.apiPath.common.useScore;
+          that.$app.post(scoreUrl, { score: 5 }).then(function(res2) {
             if (res2.code == 200) {
               that.getScore();
             }
@@ -669,6 +703,25 @@ export default {
 .privacy-text {
   font-size: 22rpx;
   color: #bbb;
+}
+
+.pk-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  margin-top: 16rpx;
+  padding: 12rpx 24rpx;
+  background: linear-gradient(135deg, #ffebee 0%, #fce4ec 100%);
+  border-radius: 28rpx;
+}
+
+.pk-link-icon { font-size: 24rpx; }
+
+.pk-link-text {
+  font-size: 22rpx;
+  color: #ff4757;
+  font-weight: 600;
 }
 
 .score-modal {

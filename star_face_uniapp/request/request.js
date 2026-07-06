@@ -16,9 +16,10 @@ let baseURL = 'http://127.0.0.1:8080/socials' //此处改成自己的域名
  	
 	
 if(process.env.NODE_ENV === 'development'){
-	baseURL='https://caineng.com/mym';
+	baseURL='http://127.0.0.1:28088';
+	baseURL='https://caineng.com/pymym';
 }else{
-	baseURL='https://caineng.com/mym';
+	baseURL='https://caineng.com/pymym';
 } 
 
 /*所有api的路径统一管理*/
@@ -27,8 +28,11 @@ const apiPath = {
 		feedback: baseURL+'/school_api/index/feedback' , // 反馈建议
 		shareUser: baseURL+'/school_api/index/shareUser' , // 分享加分
 		userSurplus: baseURL+'/school_api/index/userSurplus' , // 查询积分
-		makePhoto: baseURL+'/school_api/index/makePhoto'  ,// 制作照片(扣分),
+		useScore: baseURL+'/school_api/index/useScore'  ,// 扣分(通用),
 		videoPlus: baseURL+'/school_api/index/videoPlus' , // 看广告视频加分
+	},
+	media: {
+		check: baseURL+'/school_api/media/check' , // 图片内容安全检测(同步)
 	},
 	user: {
 		//微信小程序登录
@@ -86,9 +90,13 @@ const request = (urlType= '', url = '', type = '', data = {}, header = {}) => {
 			console.log(response)
 			// uni.hideLoading();
 			if (response[1].data.code == 200) {
-				let [error, res] = response;
-				 
-				resolve(res.data);
+			let [error, res] = response;
+			// 兼容后端登录接口：数据在 msg 字段时，映射到 data
+			let respData = res.data;
+			if (respData.msg !== undefined && respData.data === undefined && typeof respData.msg === 'object') {
+				respData.data = respData.msg;
+			}
+			resolve(respData);
 			} else if (response[1].data.code == 401) {
 				uni.showToast({
 				    title: '请先登录',

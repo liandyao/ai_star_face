@@ -60,8 +60,7 @@
     <button class="compare-btn" v-if="userGender > 0" :disabled="loading || !hasImage || failCount >= 3" @click="startCompare">
       <text v-if="failCount >= 3">🥲 愿君明日再来</text>
       <text v-else-if="loading">⏳ 正在比对中...</text>
-      <text v-else-if="score < 5">💎 积分不足(需要5积分)</text>
-      <text v-else>🌈 开始比对(消耗5积分)</text>
+      <text v-else>🌈 开始比对</text>
     </button>
 
     <view class="fail-hint" v-if="failCount >= 3 && userGender > 0">
@@ -84,7 +83,7 @@
             <text class="score-modal-item-icon">📤</text>
             <view class="score-modal-item-info">
               <text class="score-modal-item-name">分享给好友</text>
-              <text class="score-modal-item-desc">好友打开后双方各得5积分</text>
+              <text class="score-modal-item-desc">新用户点击之后双方各得5积分</text>
             </view>
             <text class="score-modal-item-score">+5</text>
           </view>
@@ -111,6 +110,7 @@
 <script>
 import AdUtil from '@/common/AdUtil.js';
 import shareUtil from '@/common/shareUtil.js';
+import mediaCheckUtil from '@/common/mediaCheckUtil.js';
 
 export default {
   data() {
@@ -125,7 +125,8 @@ export default {
       canvasHeight: 800,
       uploadedPhotoUrl: '',
       showScoreModal: false,
-      failCount: 0
+      failCount: 0,
+      pendingAction: ''
     }
   },
 
@@ -210,10 +211,20 @@ export default {
             that.score = that.score + 5;
             uni.showToast({ title: '积分+5', icon: 'success' });
           }
+          that.tryPendingAction();
         }, err => {
           that.score = that.score + 5;
+          that.tryPendingAction();
         });
       });
+    },
+
+    tryPendingAction() {
+      var that = this;
+      if (that.pendingAction === 'compare') {
+        that.pendingAction = '';
+        setTimeout(function() { that.startCompare(); }, 500);
+      }
     },
 
     showAd() {
@@ -376,6 +387,7 @@ export default {
       if (that.loading) return;
 
       if (that.score < 5) {
+        that.pendingAction = 'compare';
         that.showScoreModal = true
         return
       }
@@ -397,11 +409,28 @@ export default {
         cloudPath: cloudPath,
         success: function(uploadRes) {
           that.uploadedPhotoUrl = 'https://env-00jy674l53ts.normal.cloudstatic.cn/' + cloudPath;
-          that.readImageAndSearch(compressedPath);
+          that.checkUploadedImage(that.uploadedPhotoUrl, function() {
+            that.readImageAndSearch(compressedPath);
+          });
         },
         fail: function(err) {
-          that.readImageAndSearch(compressedPath);
+          that.resetState();
+          uni.showToast({ title: '上传失败，请重试', icon: 'none' });
         }
+      });
+    },
+
+    checkUploadedImage(url, successCallback) {
+      var that = this;
+      mediaCheckUtil.check(url, that.$app).then(function() {
+        successCallback();
+      }).catch(function(err) {
+        that.resetState();
+        uni.showModal({
+          title: '图片审核失败',
+          content: err.message || '图片暂时无法通过安全校验，请更换照片',
+          showCancel: false
+        });
       });
     },
 
@@ -473,9 +502,8 @@ export default {
             return;
           }
 
-          let openid = uni.getStorageSync("openid");
-          let url = that.$app.apiPath.common.makePhoto + '?openid=' + openid;
-          that.$app.post(url).then(function(res2) {
+          let url = that.$app.apiPath.common.useScore;
+          that.$app.post(url, { score: 5 }).then(function(res2) {
             if (res2.code == 200) {
               that.getScore();
             }
